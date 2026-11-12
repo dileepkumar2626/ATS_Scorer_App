@@ -1,7 +1,7 @@
 import logging
 from contextlib import asynccontextmanager, contextmanager
 from fastapi import FastAPI
-from middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import (
     ALLOWED_ORIGINS,
     APP_TITLE,
@@ -55,7 +55,7 @@ app.include_router(router)
 async def health_check():
     return {
         "name": "ATS Resume Analyser API",
-        "version": '2.0.0',
+        "version": '1.0.0',
         "endpoints": {
             "POST/api/v1/analyse-resume": "Analyse the resume against the job description and return a score and feedback.",
             "GET/api/v1/history": "Get User's analysis history.",
