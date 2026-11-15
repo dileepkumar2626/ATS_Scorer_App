@@ -5,3 +5,9 @@ python-multipart>=0.0.9
 python-dotenv>=1.0
 uvicorn[standard]>=0.27
 fastapi>=0.110
+
+PyPDF2
+python-magic
+python-magic-bin
+pdfplumber
+python-docx
