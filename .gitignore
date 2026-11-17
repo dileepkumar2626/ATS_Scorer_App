@@ -1,6 +1,7 @@
 .env
 *.env.*
-
+finetuned-bert/
+checkpoints/
 # Python
 __pycache__/
 *.py[cod]
