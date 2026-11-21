@@ -23,7 +23,7 @@ class FileParsingError(Exception):
 
 class FileValidationError(Exception):
     pass
-def validate_file(file: bytes, filename: str) -> Tuple[bool, Optional[str]]:
+def validate_file(file: bytes, filename: str) -> Tuple[bool, str, Optional[str]]:
     file_size = len(file)
     if file_size > MAX_FILE_SIZE_BYTES:
         return False, f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB.",None
@@ -89,8 +89,8 @@ def _extract_text_with_pypdf2(pdf_file: bytes) -> str:
     return text.strip()
 def extract_text_from_pdf(pdf_file: bytes) -> str:
     try:
-        result,used_fallback=with_fallback(_extract_text_with_pdfplumber, pdf_file,
-                                           _extract_text_with_pypdf2,log_fallback=True)
+        result,used_fallback=with_fallback(_extract_text_with_pdfplumber,
+                                           _extract_text_with_pypdf2, pdf_file, log_fallback=True)
         if used_fallback:
             log_info("Fallback to PyPDF2 for text extraction from PDF.",context="Resume Ananlyser")
         return result

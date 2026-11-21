@@ -68,10 +68,10 @@ Resume Text:
 def _call_groq(client:Groq,system_prompt:str,user_prompt:str)->str:
     response=client.chat.completions.create(
         model=GROQ_MODEL,
-        messages={
+        messages=[
             {"role":"system","content":system_prompt},
             {"role":"user","content":user_prompt}
-        },
+        ],
         temperature=0.0,
         max_tokens=4096
     )
@@ -91,7 +91,7 @@ def _try_parse_json(text:str) -> dict | None:
     
 def parse_resume(raw_text:str)->Dict:
     client=_get_client()
-    prompt=RESUME_SYSTEM_PROMPT,format(raw_text=raw_text)
+    prompt=RESUME_USER_PROMPT.format(raw_text=raw_text)
     raw_response=_call_groq(client,RESUME_SYSTEM_PROMPT,prompt)
     result=_try_parse_json(raw_response)
     if result is not None:

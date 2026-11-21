@@ -33,7 +33,7 @@ async def save_analysis(user_id: str, filename:str,analysis_result:Dict) -> Opti
         "missing_keywords":serializable_result.get("missing_keywords",[]),
         "analysis_result":serializable_result
     }
-    url=f"{SUPABASE_URL.rstrip("/")}/rest/v1/analysis"
+    url=f"{SUPABASE_URL.rstrip('/')}/rest/v1/analysis"
     try:
         async with httpx.AsyncClient() as client:
             response=await client.post(url,headers=headers,json=doc)
@@ -48,13 +48,13 @@ async def save_analysis(user_id: str, filename:str,analysis_result:Dict) -> Opti
         logger.error(f"Failed to save analysis to supabase: {exc}")
         return None
 async def get_user_history(user_id:str)-> List[dict]:
-    headers=_get_header
+    headers=_get_header()
     if not headers:
         return []
-    url=f"{SUPABASE_URL.rstrip("/")}/rest/v1/analysis"
+    url=f"{SUPABASE_URL.rstrip('/')}/rest/v1/analysis"
     try:
         async with httpx.AsyncClient() as client:
-            response=await client.get(url,headers=headers,params={"user_id":f"eq{user_id}","order":"creaed_at_desc"})
+            response=await client.get(url,headers=headers,params={"user_id":f"eq.{user_id}","order":"created_at.desc"})
             response.raise_for_status()
             docs=response.json()
             results=[]
@@ -76,13 +76,13 @@ async def get_user_history(user_id:str)-> List[dict]:
         logger.error(f"Failed to get the history from supabase {exc}")
         return []
 async def delete_analysis(analysis_id: str ,user_id:str) -> bool:
-    headers=_get_header
+    headers=_get_header()
     if not headers:
-        return []
-    url=f"{SUPABASE_URL.rstrip("/")}/rest/v1/analysis"
+        return False
+    url=f"{SUPABASE_URL.rstrip('/')}/rest/v1/analysis"
     try:
         async with httpx.AsyncClient() as client:
-            response=await client.delete(url,headers=headers,params={"user_id":f"eq{user_id}","id":f"eq{analysis_id}"})
+            response=await client.delete(url,headers=headers,params={"user_id":f"eq.{user_id}","id":f"eq.{analysis_id}"})
             response.raise_for_status()
             return True
     except Exception as exc:

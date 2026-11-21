@@ -10,9 +10,9 @@ APP_TITLE = "ATS RESUME ANALYSER API"
 APP_VERSION="1.0.0"
 APP_DESCRIPTION="Analyse the resume again the job description with NLP and ML."
 ALLOWED_ORIGINS=[
-    'https://appapppy-ktwxupi73vqhjzweksze9d.streamlit.app/',
+    'https://appapppy-ktwxupi73vqhjzweksze9d.streamlit.app',
 ]
-MAX_FILE_SIZE = 5
+MAX_FILE_SIZE_MB = 5
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 SUPPORTED_FILE_TYPES = {
     "application/pdf": "pdf",
