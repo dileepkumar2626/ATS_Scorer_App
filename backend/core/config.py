@@ -10,7 +10,7 @@ APP_TITLE = "ATS RESUME ANALYSER API"
 APP_VERSION="1.0.0"
 APP_DESCRIPTION="Analyse the resume again the job description with NLP and ML."
 ALLOWED_ORIGINS=[
-    "www.google.com",
+    'https://appapppy-ktwxupi73vqhjzweksze9d.streamlit.app/',
 ]
 MAX_FILE_SIZE = 5
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
@@ -19,8 +19,8 @@ SUPPORTED_FILE_TYPES = {
     "application/msword": "doc",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 }
-SPACY_MODEL_PRIMARY="en_core_web_sm"
-SPACY_MODEL_SECONDARY="en_core_web_md"
+SPACY_MODEL_PRIMARY="en_core_web_md"
+SPACY_MODEL_SECONDARY="en_core_web_sm"
 SENTENCE_TRANSFORMER_MODEL="sentence-transformers/all-MiniLM-L6-v2"
 SCORE_WEIGHTS = {
     "formatting": 20,

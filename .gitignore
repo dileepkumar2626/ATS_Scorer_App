@@ -15,6 +15,7 @@ build/
 .venv/
 venv/
 env/
+logs/
 
 # Node
 node_modules/
