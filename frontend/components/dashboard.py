@@ -9,32 +9,7 @@ from frontend.components.jd_comparison import display_jd_comparison
 
 
 def _right_panel(analysis: Dict[str, Any]) -> None:
-    """Right sidebar panel: save button, job match %, missing skills, suggestions."""
-    # ── Save Report button (always visible) ─────────────────
-    saved_key = f"dash_saved_{id(analysis)}"
-    if st.session_state.get(saved_key):
-        st.markdown("""
-        <div style="text-align:center;padding:8px 0;color:#10B981;font-size:12px;
-             font-weight:600;border:1px solid rgba(16,185,129,.3);border-radius:8px;
-             background:rgba(16,185,129,.08);margin-bottom:10px">
-          ✅ Saved to Reports
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        if st.button("💾 Save Report", use_container_width=True, key=f"save_btn_{id(analysis)}"):
-            score = float(analysis.get("ATS_score", analysis.get("ats_score", 0)))
-            entry = {
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "score": score,
-                "analysis": analysis,
-                "has_jd": bool(analysis.get("jd_comparison") or analysis.get("jd_match_analysis")),
-            }
-            if "saved_reports_list" not in st.session_state:
-                st.session_state["saved_reports_list"] = []
-            st.session_state["saved_reports_list"].insert(0, entry)
-            st.session_state[saved_key] = True
-            st.rerun()
-
+    """Right sidebar panel: job match %, missing skills, suggestions, scores."""
     jd = analysis.get("jd_comparison") or analysis.get("jd_match_analysis")
 
     # ── Match with Job Description ──────────────────────────

@@ -31,19 +31,16 @@ def render():
         (s3, "5",     "Scoring Dimensions"),
         (s4, "< 30s", "Analysis Time"),
     ]:
-        col.markdown(f"""
-        <div class="stat-box">
-          <div class="stat-number">{num}</div>
-          <div class="stat-label">{label}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        col.markdown(
+            f'<div class="stat-box"><div class="stat-number">{num}</div><div class="stat-label">{label}</div></div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown("<div style='margin-top:36px'></div>", unsafe_allow_html=True)
-    st.markdown("""
-    <div style="font-size:20px;font-weight:700;color:var(--text-1);margin-bottom:20px">
-      ✨ Key Features
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="font-size:19px;font-weight:700;color:#F1F5F9;margin-bottom:20px;letter-spacing:-.03em">✨ Key Features</div>',
+        unsafe_allow_html=True,
+    )
 
     f1, f2, f3 = st.columns(3)
     for col, icon, title, desc in [
@@ -55,13 +52,11 @@ def render():
          "AI verifies your claimed skills are actually demonstrated in your projects and experience. No more empty claims."),
     ]:
         with col:
-            st.markdown(f"""
-            <div class="feature-card">
-              <div class="feature-icon">{icon}</div>
-              <div class="feature-title">{title}</div>
-              <div class="feature-desc">{desc}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="feature-card"><div class="feature-icon">{icon}</div>'
+                f'<div class="feature-title">{title}</div><div class="feature-desc">{desc}</div></div>',
+                unsafe_allow_html=True,
+            )
 
     st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
 
@@ -75,20 +70,17 @@ def render():
          "Download a full PDF report of your analysis to share with mentors or track your progress over time."),
     ]:
         with col:
-            st.markdown(f"""
-            <div class="feature-card">
-              <div class="feature-icon">{icon}</div>
-              <div class="feature-title">{title}</div>
-              <div class="feature-desc">{desc}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="feature-card"><div class="feature-icon">{icon}</div>'
+                f'<div class="feature-title">{title}</div><div class="feature-desc">{desc}</div></div>',
+                unsafe_allow_html=True,
+            )
 
     st.markdown("<div style='margin-top:36px'></div>", unsafe_allow_html=True)
-    st.markdown("""
-    <div style="font-size:20px;font-weight:700;color:var(--text-1);margin-bottom:20px">
-      🚀 How It Works
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="font-size:19px;font-weight:700;color:#F1F5F9;margin-bottom:20px;letter-spacing:-.03em">🚀 How It Works</div>',
+        unsafe_allow_html=True,
+    )
 
     h1, h2, h3 = st.columns(3)
     for col, num, title, desc in [
@@ -100,17 +92,16 @@ def render():
          "Review your score, keyword matches, and prioritized recommendations to improve."),
     ]:
         with col:
-            st.markdown(f"""
-            <div class="dark-card" style="text-align:center;padding:28px 20px">
-              <div style="width:48px;height:48px;border-radius:50%;background:var(--purple-gradient);
-                   display:flex;align-items:center;justify-content:center;font-size:20px;
-                   font-weight:800;color:white;margin:0 auto 14px">{num}</div>
-              <div style="font-size:15px;font-weight:600;color:var(--text-1);margin-bottom:6px">
-                {title}
-              </div>
-              <div style="font-size:13px;color:var(--text-3)">{desc}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="dark-card" style="text-align:center;padding:28px 20px">'
+                f'<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);'
+                f'display:flex;align-items:center;justify-content:center;font-size:20px;'
+                f'font-weight:800;color:white;margin:0 auto 14px;box-shadow:0 4px 12px rgba(124,58,237,.4)">{num}</div>'
+                f'<div style="font-size:15px;font-weight:600;color:#F1F5F9;margin-bottom:6px;letter-spacing:-.02em">{title}</div>'
+                f'<div style="font-size:13px;color:#94A3B8;line-height:1.55">{desc}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
     st.markdown("<div style='margin-top:32px;text-align:center'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])

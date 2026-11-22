@@ -45,8 +45,10 @@ if not st.session_state.access_token and "code" in st.query_params:
 def load_css():
     try:
         css_path = Path(__file__).parent / "assets" / "styles.css"
-        with open(css_path, "r") as f:
-            return f"<style>{f.read()}</style>"
+        with open(css_path, "r", encoding="utf-8") as f:
+            css = f.read()
+        # <link> tags are more reliable than CSS @import for external fonts in Streamlit
+        return f"<style>{css}</style>"
     except FileNotFoundError:
         return ""
 
@@ -77,31 +79,31 @@ with st.sidebar:
     from frontend.services import supabase_client
 
     # ── Brand ────────────────────────────────────────────────
-    st.markdown("""
-    <div class="nav-brand">
-      <div class="brand-icon">📋</div>
-      <div>ResumeAnalyzer <span style="color:#8B5CF6">AI</span></div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div class="nav-brand">'
+        '<div class="brand-icon">📋</div>'
+        '<div>ResumeAnalyzer <span style="color:#A78BFA">AI</span></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # ── Account / Auth (at top) ──────────────────────────────
     if st.session_state.access_token:
         email_display = st.session_state.user_email or "User"
         initial = email_display[0].upper() if email_display else "U"
-        st.markdown(f"""
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 4px 12px;">
-          <div style="width:34px;height:34px;border-radius:50%;background:var(--purple-gradient);
-               display:flex;align-items:center;justify-content:center;font-weight:700;
-               font-size:14px;color:white;flex-shrink:0">{initial}</div>
-          <div style="overflow:hidden;">
-            <div style="font-size:11px;color:var(--text-4);margin-bottom:1px">Signed in as</div>
-            <div style="font-size:13px;color:var(--text-2);font-weight:500;
-                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">
-              {email_display}
-            </div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:10px;padding:8px 4px 12px;'
+            f'background:rgba(255,255,255,.04);border-radius:10px;margin-bottom:4px">'
+            f'<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);'
+            f'display:flex;align-items:center;justify-content:center;font-weight:700;'
+            f'font-size:14px;color:white;flex-shrink:0;box-shadow:0 2px 8px rgba(124,58,237,.4)">{initial}</div>'
+            f'<div style="overflow:hidden;min-width:0">'
+            f'<div style="font-size:10.5px;color:#64748B;margin-bottom:1px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Account</div>'
+            f'<div style="font-size:12.5px;color:#CBD5E1;font-weight:500;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px">{email_display}</div>'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
         if st.button("Sign out", use_container_width=True):
             supabase_client.sign_out()
             for k in ("access_token", "refresh_token", "user_id", "user_email"):
@@ -188,7 +190,11 @@ with st.sidebar:
 
         # Google OAuth — branded button
         st.markdown(
-            "<div style='text-align:center;margin:10px 0 4px;color:var(--text-4);font-size:12px'>or</div>",
+            '<div style="display:flex;align-items:center;gap:10px;margin:10px 0 4px">'
+            '<div style="flex:1;height:1px;background:rgba(255,255,255,.07)"></div>'
+            '<div style="font-size:11px;color:#64748B;font-weight:500">or</div>'
+            '<div style="flex:1;height:1px;background:rgba(255,255,255,.07)"></div>'
+            '</div>',
             unsafe_allow_html=True,
         )
         oauth = supabase_client.google_oauth_url()

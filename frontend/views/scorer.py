@@ -247,28 +247,7 @@ def _render_export_buttons(analysis: dict) -> None:
             key="download_summary",
         )
     with c3:
-        saved_key = f"saved_{id(analysis)}"
-        already_saved = st.session_state.get(saved_key, False)
-        if already_saved:
-            st.markdown("""
-            <div style="text-align:center;padding:10px;color:#10B981;font-size:13px;font-weight:600">
-              ✅ Saved to Reports
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            if st.button("💾 Save Report", use_container_width=True):
-                score = float(analysis.get("ATS_score", analysis.get("ats_score", 0)))
-                report_entry = {
-                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "score": score,
-                    "analysis": analysis,
-                    "has_jd": bool(analysis.get("jd_comparison") or analysis.get("jd_match_analysis")),
-                }
-                if "saved_reports_list" not in st.session_state:
-                    st.session_state["saved_reports_list"] = []
-                st.session_state["saved_reports_list"].insert(0, report_entry)
-                st.session_state[saved_key] = True
-                st.rerun()
+        pass  # Save Report is handled by the banner above the tabs
 
 
 def _show_intro() -> None:
