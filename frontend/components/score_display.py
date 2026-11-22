@@ -1,12 +1,7 @@
 from typing import Any, Dict
-
 import streamlit as st
-
 from frontend.components._helpers import get_score_color, get_score_emoji
 
-
-# Component max scores match backend/core/config.py SCORE_WEIGHTS.
-# (Backend returns each component's score on its own scale, not 0–100.)
 COMPONENTS = [
     ("Formatting",        "formatting",        20, "📝"),
     ("Keywords & Skills", "keywords",          25, "🔑"),
@@ -16,52 +11,131 @@ COMPONENTS = [
 ]
 
 
+def _score_svg(score: float, label: str = "ATS Score", size: int = 190) -> str:
+    r = 72
+    circ = 2 * 3.14159265 * r
+    offset = circ * (1.0 - min(max(score, 0), 100) / 100.0)
+
+    if score >= 80:
+        c1, c2 = "#10B981", "#34D399"
+    elif score >= 60:
+        c1, c2 = "#F59E0B", "#FBBF24"
+    else:
+        c1, c2 = "#EF4444", "#F87171"
+
+    return f"""
+    <svg viewBox="0 0 200 200" width="{size}" height="{size}">
+      <defs>
+        <linearGradient id="sg_{int(score)}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   style="stop-color:{c1};stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:{c2};stop-opacity:1"/>
+        </linearGradient>
+      </defs>
+      <circle cx="100" cy="100" r="{r}"
+        fill="none" stroke="#2D3448" stroke-width="14"/>
+      <circle cx="100" cy="100" r="{r}"
+        fill="none"
+        stroke="url(#sg_{int(score)})" stroke-width="14"
+        stroke-dasharray="{circ:.2f}" stroke-dashoffset="{offset:.2f}"
+        stroke-linecap="round"
+        transform="rotate(-90,100,100)"/>
+      <text x="100" y="92" text-anchor="middle"
+        fill="#F0F6FC" font-size="34" font-weight="700"
+        font-family="-apple-system,BlinkMacSystemFont,sans-serif">{score:.0f}%</text>
+      <text x="100" y="114" text-anchor="middle"
+        fill="#8B949E" font-size="13"
+        font-family="-apple-system,BlinkMacSystemFont,sans-serif">{label}</text>
+    </svg>
+    """
+
+
+def _prog_bar(value: float, max_val: float, label: str, icon: str) -> str:
+    pct = min(max(value / max_val if max_val else 0, 0), 1) * 100
+    if pct >= 80:
+        cls = "prog-green"
+    elif pct >= 60:
+        cls = "prog-yellow"
+    else:
+        cls = "prog-red"
+    # Single-line HTML — no newlines/blank-lines so Python-Markdown's HTML block
+    # parser never exits HTML mode mid-string and renders subsequent bars as code.
+    return (
+        f'<div class="prog-wrap">'
+        f'<div class="prog-label">'
+        f'<span>{icon} {label}</span>'
+        f'<span style="font-weight:600;color:#F0F6FC">{value:.0f}/{max_val:.0f}</span>'
+        f'</div>'
+        f'<div class="prog-track">'
+        f'<div class="prog-fill {cls}" style="width:{pct:.1f}%"></div>'
+        f'</div>'
+        f'</div>'
+    )
+
+
 def display_overall_score(analysis: Dict[str, Any]) -> None:
-    """Big colored score card with a short interpretation line."""
     score = float(analysis.get("ATS_score", analysis.get("ats_score", 0)))
     interpretation = analysis.get("interpretation", "")
-    text_color, bg_color = get_score_color(score)
-    emoji = get_score_emoji(score)
 
-    st.markdown("## 📊 Analysis Results")
-    _, mid, _ = st.columns([1, 2, 1])
-    with mid:
+    if score >= 80:
+        grade = "Great Match! 🎯"
+        grade_color = "#10B981"
+        badge_html = """
+        <div class="badge-row">
+          <span class="badge badge-green">✓ ATS Friendly</span>
+          <span class="badge badge-green">✓ Relevant Skills</span>
+          <span class="badge badge-green">✓ Good Structure</span>
+        </div>"""
+    elif score >= 60:
+        grade = "Good Match 👍"
+        grade_color = "#F59E0B"
+        badge_html = """
+        <div class="badge-row">
+          <span class="badge badge-green">✓ ATS Friendly</span>
+          <span class="badge badge-yellow">⚡ Needs Keywords</span>
+          <span class="badge badge-yellow">⚡ Improve Content</span>
+        </div>"""
+    else:
+        grade = "Needs Improvement 📝"
+        grade_color = "#EF4444"
+        badge_html = """
+        <div class="badge-row">
+          <span class="badge badge-red">✗ ATS Issues</span>
+          <span class="badge badge-red">✗ Missing Keywords</span>
+          <span class="badge badge-yellow">⚡ Structure Issues</span>
+        </div>"""
+
+    left, right = st.columns([1, 2])
+    with left:
         st.markdown(
-            f"""
-            <div style="text-align:center; padding:2rem; background-color:{bg_color};
-                        border-radius:15px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-                <h1 style="color:{text_color}; font-size:4.5rem; margin:0; font-weight:bold;">
-                    {emoji} {score:.0f}
-                </h1>
-                <h3 style="color:{text_color}; margin:0.5rem 0;">Overall ATS Score</h3>
-                <p style="color:#666; margin-top:0.5rem;">{interpretation}</p>
-            </div>
-            """,
+            f'<div class="score-wrap">{_score_svg(score)}</div>',
+            unsafe_allow_html=True,
+        )
+    with right:
+        interp = interpretation or "Your resume has been analyzed. See the detailed breakdown below."
+        st.markdown(
+            f'<div style="padding:12px 0;">'
+            f'<h2 style="color:{grade_color};margin:0 0 6px;font-size:26px">{grade}</h2>'
+            f'<p style="color:#8B949E;margin:0 0 14px;font-size:14px;line-height:1.5">{interp}</p>'
+            f'{badge_html}'
+            f'</div>',
             unsafe_allow_html=True,
         )
 
 
 def display_score_breakdown(analysis: Dict[str, Any]) -> None:
-    """Five progress bars, one per scoring component."""
     component_scores = analysis.get("component_scores") or {}
-    st.markdown("### 📈 Score Breakdown")
+    st.markdown("#### 📈 Score Breakdown")
 
-    left, right = st.columns(2)
-    for i, (label, key, max_score, icon) in enumerate(COMPONENTS):
-        value = float(component_scores.get(key, 0))
-        percentage = value / max_score if max_score else 0
-        bar_color = "green" if percentage >= 0.8 else "orange" if percentage >= 0.6 else "red"
-
-        with left if i % 2 == 0 else right:
-            st.markdown(f"**{icon} {label}**")
-            st.markdown(
-                f"""
-                <div style="background-color:#e0e0e0; border-radius:10px; height:20px; margin-bottom:5px;">
-                    <div style="background-color:{bar_color}; width:{percentage * 100}%;
-                                height:100%; border-radius:10px; transition:width 0.5s;"></div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            st.markdown(f"**{value:.0f}/{max_score}**")
-            st.markdown("")
+    bars_html = "".join(
+        _prog_bar(
+            float(component_scores.get(key, 0)),
+            float(max_score),
+            label,
+            icon,
+        )
+        for label, key, max_score, icon in COMPONENTS
+    )
+    st.markdown(
+        f'<div class="dark-card" style="padding:16px 20px">{bars_html}</div>',
+        unsafe_allow_html=True,
+    )

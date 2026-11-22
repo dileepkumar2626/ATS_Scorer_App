@@ -95,11 +95,29 @@ def google_oauth_url() -> Dict[str, Any]:
     err = _missing_config()
     if err:
         return {'error': err}
+    # Cache URL + verifier in session_state.
+    # The sidebar calls this function on EVERY Streamlit rerun. Without caching,
+    # each call to sign_in_with_oauth generates a NEW code_verifier and overwrites
+    # the previous one in memory — so the verifier no longer matches the URL the
+    # user clicked, causing "both auth code and code verifier should be non-empty".
+    if '_google_oauth_cache' in st.session_state:
+        return {'url': st.session_state['_google_oauth_cache']}
     try:
-        resp = get_client().auth.sign_in_with_oauth({
+        client = get_client()
+        resp = client.auth.sign_in_with_oauth({
             'provider': 'google',
             'options': {'redirect_to': OAUTH_REDIRECT_URL},
         })
+        # Immediately capture code_verifier from client storage before any
+        # subsequent call can overwrite it, and persist it in session_state.
+        try:
+            storage_key = f'{client.auth._storage_key}-code-verifier'
+            cv = client.auth._storage.get_item(storage_key) or ''
+        except Exception:
+            cv = ''
+        st.session_state['_google_oauth_cache'] = resp.url
+        if cv:
+            st.session_state['_google_code_verifier'] = cv
         return {'url': resp.url}
     except Exception as exc:
         logger.warning(f'oauth url generation failed: {exc}')
@@ -113,18 +131,41 @@ def exchange_code_for_session(auth_code: str) -> Dict[str, Any]:
         return {'error': err}
     client = get_client()
     try:
-        storage_key = f'{client.auth._storage_key}-code-verifier'
-        code_verifier = client.auth._storage.get_item(storage_key) or ''
+        # Prefer the verifier we saved to session_state; fall back to storage.
+        code_verifier = st.session_state.pop('_google_code_verifier', '') or ''
+        if not code_verifier:
+            try:
+                storage_key = f'{client.auth._storage_key}-code-verifier'
+                code_verifier = client.auth._storage.get_item(storage_key) or ''
+            except Exception:
+                code_verifier = ''
         resp = client.auth.exchange_code_for_session({
-            'auth_code': auth_code,
+            'auth_code':    auth_code,
             'code_verifier': code_verifier,
-            'redirect_to': OAUTH_REDIRECT_URL,
+            'redirect_to':  OAUTH_REDIRECT_URL,
         })
         if not resp.session or not resp.user:
             return {'error': 'OAuth exchange returned no session'}
+        # Clear cached URL so next sign-in attempt generates a fresh PKCE pair
+        st.session_state.pop('_google_oauth_cache', None)
         return _session_dict(resp.session, resp.user)
     except Exception as exc:
         logger.warning(f'exchange_code_for_session failed: {exc}')
+        return {'error': _humanize(exc)}
+
+
+def reset_password_for_email(email: str) -> Dict[str, Any]:
+    err = _missing_config()
+    if err:
+        return {'error': err}
+    try:
+        get_client().auth.reset_password_for_email(
+            email,
+            {'redirect_to': OAUTH_REDIRECT_URL}
+        )
+        return {'success': True}
+    except Exception as exc:
+        logger.warning(f'reset_password failed: {exc}')
         return {'error': _humanize(exc)}
 
 

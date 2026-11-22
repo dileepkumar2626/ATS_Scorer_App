@@ -1,366 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Recommendations & Action Items</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            color: #1e293b;
-            margin: 0;
-            padding: 40px 50px;
-            line-height: 1.6;
-            background: #fff;
-        }
+<meta charset="UTF-8">
+<title>Recommendations Report</title>
+<style>
+@page { margin: 0; size: A4 portrait; }
+* { box-sizing: border-box; }
+body {
+  font-family: Helvetica, Arial, sans-serif;
+  color: #1e1b4b; margin: 0; padding: 0;
+  font-size: 11px; line-height: 1.5; background: #fff;
+}
+.hdr { background: #065f46; color: white; padding: 18px 36px 16px; }
+.hdr-title { font-size: 20px; font-weight: 900; color: white; margin: 0; }
+.hdr-sub   { font-size: 11px; color: #a7f3d0; margin: 3px 0 0; }
+.content   { padding: 24px 36px 0; }
+.sec-title {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+  text-transform: uppercase; color: #065f46;
+  border-left: 4px solid #065f46; padding-left: 10px;
+  margin: 20px 0 12px;
+}
+.two-col { width:100%; border-collapse:collapse; }
+.col-l { width:50%; vertical-align:top; padding-right:14px; }
+.col-r { width:50%; vertical-align:top; padding-left:14px; border-left:1px solid #d1fae5; }
 
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 3px solid #1e293b;
-            padding-bottom: 14px;
-            margin-bottom: 32px;
-        }
-        .page-header .report-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:#64748b; }
-        .page-header .date         { font-size:12px; color:#64748b; }
+/* Recommendation cards by severity */
+.reco-card {
+  margin-bottom: 10px; padding: 10px 14px;
+  border-radius: 0 6px 6px 0;
+}
+.reco-critical { background:#fef2f2; border-left:4px solid #dc2626; }
+.reco-high     { background:#fff7ed; border-left:4px solid #ea580c; }
+.reco-medium   { background:#fffbeb; border-left:4px solid #d97706; }
+.reco-low      { background:#f0fdf4; border-left:4px solid #16a34a; }
+.reco-title  { font-size:12px; font-weight:700; margin:0 0 4px; }
+.reco-action { font-size:10px; color:#374151; margin-top:4px; }
+.priority-dot {
+  display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px;
+}
 
-        h1.report-title { font-size:28px; font-weight:900; color:#0f172a; margin:0 0 10px 0; }
-        .report-subtitle { font-size:14px; color:#64748b; margin-bottom:28px; }
+/* Quick wins */
+.quick-item {
+  display:flex; align-items:flex-start; gap:8px;
+  padding:8px 12px; margin-bottom:8px;
+  background:#f0fdf4; border-radius:6px;
+  font-size:11px; color:#14532d;
+}
+.quick-num {
+  background:#16a34a; color:white;
+  min-width:20px; height:20px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; flex-shrink:0; margin-top:1px;
+}
 
-        h2 {
-            font-size: 16px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 1.5px; color: #334155;
-            margin: 36px 0 16px 0; padding-bottom: 8px;
-            border-bottom: 2px solid #e2e8f0;
-        }
+/* Chips */
+.chip {
+  display:inline-block; padding:2px 9px; border-radius:10px;
+  font-size:9px; font-weight:600; margin:2px;
+}
+.chip-green { background:#dcfce7; color:#166534; }
+.chip-amber { background:#fef9c3; color:#92400e; }
+.chip-red   { background:#fee2e2; color:#991b1b; }
 
-        /* ── Issue Cards ── */
-        .issue-card {
-            border-radius: 8px;
-            margin-bottom: 20px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-        }
-        .issue-header {
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .issue-severity-badge {
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            padding: 3px 8px;
-            border-radius: 4px;
-            flex-shrink: 0;
-        }
-        .badge-high     { background: #fee2e2; color: #991b1b; }
-        .badge-moderate { background: #fef9c3; color: #92400e; }
-        .badge-low      { background: #e0e7ff; color: #3730a3; }
-
-        .issue-title-text {
-            font-size: 14px;
-            font-weight: 700;
-            color: #0f172a;
-        }
-        .issue-body { padding: 0 16px 14px 16px; }
-        .issue-explanation {
-            font-size: 13px;
-            color: #475569;
-            margin-bottom: 10px;
-        }
-        .issue-detail-row {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 8px;
-        }
-        .detail-label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #94a3b8;
-            width: 80px;
-            flex-shrink: 0;
-            padding-top: 1px;
-        }
-        .detail-value {
-            font-size: 13px;
-            color: #334155;
-            flex: 1;
-        }
-        .fix-box {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 6px;
-            padding: 10px 14px;
-            font-size: 13px;
-            color: #14532d;
-            margin-top: 8px;
-        }
-        .fix-box strong { display: block; margin-bottom: 3px; }
-
-        /* ── Action Items inside each card ── */
-        .action-list { margin: 8px 0 0 0; padding: 0; list-style: none; }
-        .action-list li {
-            padding: 5px 0 5px 20px;
-            font-size: 12px;
-            color: #475569;
-            border-bottom: 1px solid #f1f5f9;
-            position: relative;
-        }
-        .action-list li:last-child { border-bottom: none; }
-        .action-list li::before {
-            content: "→";
-            position: absolute;
-            left: 0;
-            color: #94a3b8;
-            font-weight: 700;
-        }
-
-        /* ── Printable Checklist ── */
-        .checklist-section { margin-top: 40px; }
-        .checklist-group { margin-bottom: 28px; }
-        .checklist-group-title {
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 8px 12px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-        }
-        .cgt-high     { background: #fee2e2; color: #991b1b; }
-        .cgt-moderate { background: #fef9c3; color: #78350f; }
-        .cgt-low      { background: #ede9fe; color: #5b21b6; }
-
-        .checklist-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 8px 0;
-            border-bottom: 1px dotted #e2e8f0;
-        }
-        .checklist-item:last-child { border-bottom: none; }
-        .checkbox {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #cbd5e1;
-            border-radius: 3px;
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-        .checklist-text { font-size: 13px; color: #334155; }
-
-        /* ── Empty state ── */
-        .empty-state {
-            text-align: center;
-            color: #64748b;
-            padding: 24px;
-            background: #f0fdf4;
-            border-radius: 8px;
-            font-size: 13px;
-            border: 1px solid #bbf7d0;
-        }
-
-        .footer {
-            margin-top: 48px; padding-top: 16px;
-            border-top: 1px solid #e2e8f0;
-            font-size: 11px; color: #94a3b8;
-            display: flex; justify-content: space-between;
-        }
-    </style>
+/* Footer */
+.footer { background:#064e3b; color:#6ee7b7; padding:10px 36px; font-size:9px; margin-top:24px; }
+</style>
 </head>
 <body>
 
-    <div class="page-header">
-        <div class="report-label">ATS Resume Score Report</div>
-        <div class="date">{{ timestamp | format_date }}</div>
+<div class="hdr">
+  <table style="width:100%;border-collapse:collapse"><tr>
+    <td><div class="hdr-title">💡 Recommendations &amp; Action Plan</div>
+        <div class="hdr-sub">Prioritized Steps to Maximize Your ATS Score</div></td>
+    <td style="text-align:right;vertical-align:top;color:#a7f3d0;font-size:10px">
+      {{ timestamp | format_date }}
+    </td>
+  </tr></table>
+</div>
+
+<div class="content">
+
+<!-- Critical / High -->
+{% if high_priority %}
+<div class="sec-title">Critical Issues to Fix Now</div>
+{% for item in high_priority %}
+<div class="reco-card reco-high">
+  <div class="reco-title" style="color:#9a3412">
+    🔴 {{ item.issue_title or 'Issue' }}
+    {% if item.ats_impact %}<span style="font-weight:400;font-size:9px;color:#78716c;margin-left:6px">{{ item.ats_impact }}</span>{% endif %}
+  </div>
+  {% if item.explanation %}
+  <div style="font-size:10px;color:#57534e;margin-bottom:4px">{{ item.explanation[:150] }}{% if item.explanation|length > 150 %}…{% endif %}</div>
+  {% endif %}
+  {% if item.action_items %}
+  {% for action in item.action_items[:3] %}
+  <div class="reco-action">▶ {{ action[:130] }}{% if action|length > 130 %}…{% endif %}</div>
+  {% endfor %}
+  {% endif %}
+  {% if item.how_to_fix %}
+  <div style="font-size:10px;background:#ecfdf5;color:#065f46;padding:5px 9px;border-radius:4px;margin-top:6px">
+    <strong>Fix:</strong> {{ item.how_to_fix[:120] }}{% if item.how_to_fix|length > 120 %}…{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Medium priority in two columns -->
+{% if medium_priority %}
+<div class="sec-title">Medium Priority Improvements</div>
+<table class="two-col">
+  <tr>
+  {% for item in medium_priority[:6] %}
+  {% if loop.index == 1 %}<td class="col-l">{% elif loop.index == 4 %}</td><td class="col-r">{% endif %}
+    <div class="reco-card reco-medium">
+      <div class="reco-title" style="color:#92400e">🟡 {{ item.issue_title or 'Issue' }}</div>
+      {% if item.how_to_fix %}
+      <div class="reco-action">{{ item.how_to_fix[:100] }}{% if item.how_to_fix|length > 100 %}…{% endif %}</div>
+      {% elif item.action_items %}
+      <div class="reco-action">{{ item.action_items[0][:100] }}</div>
+      {% endif %}
     </div>
+  {% endfor %}
+  {% if medium_priority|length < 4 %}</td><td class="col-r"></td>{% endif %}
+  </tr>
+</table>
+{% endif %}
 
-    <h1 class="report-title">Recommendations</h1>
-    {% set total_issues = all_feedback | length %}
-    <p class="report-subtitle">
-        {{ total_issues }} issue(s) found. Addressing all of them could significantly improve your ATS score.
-    </p>
+<!-- Low priority / quick wins -->
+{% if low_priority %}
+<div class="sec-title">Quick Wins (Low Effort)</div>
+{% for item in low_priority[:5] %}
+<div class="reco-card reco-low">
+  <div class="reco-title" style="color:#166534">🟢 {{ item.issue_title or 'Improvement' }}</div>
+  {% if item.action_items %}
+  {% for a in item.action_items[:2] %}
+  <div class="reco-action">• {{ a[:130] }}{% if a|length > 130 %}…{% endif %}</div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
 
-    <!-- ═══════════════════════════════════════════════ -->
-    <!-- PART 1: Detailed Recommendations                -->
-    <!-- ═══════════════════════════════════════════════ -->
+<!-- If no feedback at all -->
+{% if not high_priority and not medium_priority and not low_priority %}
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px;text-align:center;color:#166534">
+  ✅ <strong>No significant issues found!</strong><br>
+  <span style="font-size:10px">Your resume is well-optimized. Keep it updated with recent projects.</span>
+</div>
+{% endif %}
 
-    <!-- ── High Priority ── -->
-    {% if high_priority %}
-    <h2>High Priority — Fix These First</h2>
-    {% for issue in high_priority %}
-    <div class="issue-card">
-        <div class="issue-header" style="background:#fef2f2; border-bottom:1px solid #fecaca;">
-            <span class="issue-severity-badge badge-high">High</span>
-            <span class="issue-title-text">{{ issue.issue_title }}</span>
-        </div>
-        <div class="issue-body">
-            <p class="issue-explanation">{{ issue.explanation }}</p>
-            <div class="issue-detail-row">
-                <span class="detail-label">ATS Impact</span>
-                <span class="detail-value">{{ issue.ats_impact }}</span>
-            </div>
-            {% if issue.where_it_appears %}
-            <div class="issue-detail-row">
-                <span class="detail-label">Location</span>
-                <span class="detail-value">{{ issue.where_it_appears }}</span>
-            </div>
-            {% endif %}
-            <div class="fix-box">
-                <strong>How to Fix:</strong>
-                {{ issue.how_to_fix }}
-            </div>
-            {% if issue.action_items %}
-            <ul class="action-list">
-                {% for step in issue.action_items %}
-                <li>{{ step }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% if issue.example_improvement %}
-            <div style="margin-top:10px; background:#f8fafc; border:1px solid #e2e8f0;
-                        border-radius:6px; padding:10px 14px; font-size:12px; color:#334155;">
-                <strong style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#94a3b8;">
-                    Example:
-                </strong>
-                <pre style="margin:6px 0 0 0; white-space:pre-wrap; font-family:monospace; font-size:11px; color:#334155;">{{ issue.example_improvement }}</pre>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
+</div>
 
-    <!-- ── Medium Priority ── -->
-    {% if medium_priority %}
-    <h2>Medium Priority — Strengthen Your Resume</h2>
-    {% for issue in medium_priority %}
-    <div class="issue-card">
-        <div class="issue-header" style="background:#fefce8; border-bottom:1px solid #fde68a;">
-            <span class="issue-severity-badge badge-moderate">Moderate</span>
-            <span class="issue-title-text">{{ issue.issue_title }}</span>
-        </div>
-        <div class="issue-body">
-            <p class="issue-explanation">{{ issue.explanation }}</p>
-            <div class="issue-detail-row">
-                <span class="detail-label">ATS Impact</span>
-                <span class="detail-value">{{ issue.ats_impact }}</span>
-            </div>
-            {% if issue.where_it_appears %}
-            <div class="issue-detail-row">
-                <span class="detail-label">Location</span>
-                <span class="detail-value">{{ issue.where_it_appears }}</span>
-            </div>
-            {% endif %}
-            <div class="fix-box">
-                <strong>How to Fix:</strong>
-                {{ issue.how_to_fix }}
-            </div>
-            {% if issue.action_items %}
-            <ul class="action-list">
-                {% for step in issue.action_items %}
-                <li>{{ step }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    <!-- ── Low Priority ── -->
-    {% if low_priority %}
-    <h2>Low Priority — Polish</h2>
-    {% for issue in low_priority %}
-    <div class="issue-card">
-        <div class="issue-header" style="background:#ede9fe; border-bottom:1px solid #ddd6fe;">
-            <span class="issue-severity-badge badge-low">Low</span>
-            <span class="issue-title-text">{{ issue.issue_title }}</span>
-        </div>
-        <div class="issue-body">
-            <p class="issue-explanation">{{ issue.explanation }}</p>
-            <div class="fix-box">
-                <strong>How to Fix:</strong>
-                {{ issue.how_to_fix }}
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    {% if not all_feedback %}
-    <div class="empty-state">
-        No issues detected! Your resume passes all structural and content checks.
-        Review the score breakdown in Report 1 for any minor improvements.
-    </div>
-    {% endif %}
-
-    <!-- ═══════════════════════════════════════════════ -->
-    <!-- PART 2: Printable Action Items Checklist        -->
-    <!-- ═══════════════════════════════════════════════ -->
-
-    <div class="checklist-section">
-        <h2>Action Items Checklist</h2>
-        <p style="font-size:13px; color:#64748b; margin-bottom:20px;">
-            Use this checklist to track your resume improvements. Check off each item as you complete it.
-        </p>
-
-        {% if high_priority %}
-        <div class="checklist-group">
-            <div class="checklist-group-title cgt-high">High Priority</div>
-            {% for issue in high_priority %}
-            {% for step in issue.action_items %}
-            <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-text">{{ step }}</div>
-            </div>
-            {% endfor %}
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if medium_priority %}
-        <div class="checklist-group">
-            <div class="checklist-group-title cgt-moderate">Medium Priority</div>
-            {% for issue in medium_priority %}
-            {% for step in issue.action_items %}
-            <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-text">{{ step }}</div>
-            </div>
-            {% endfor %}
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if low_priority %}
-        <div class="checklist-group">
-            <div class="checklist-group-title cgt-low">Low Priority</div>
-            {% for issue in low_priority %}
-            {% for step in issue.action_items %}
-            <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-text">{{ step }}</div>
-            </div>
-            {% endfor %}
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if not all_feedback %}
-        <div class="empty-state">No action items — your resume is in great shape!</div>
-        {% endif %}
-    </div>
-
-    <div class="footer">
-        <span>Generated by ATS Resume Scorer</span>
-        <span>Report 4 of 4 — Recommendations &amp; Checklist</span>
-    </div>
-
+<div class="footer">
+  <table style="width:100%;border-collapse:collapse"><tr>
+    <td><strong style="color:#a7f3d0">🎯 ResumeAnalyzer AI</strong></td>
+    <td style="text-align:center">Page 3 — Recommendations</td>
+    <td style="text-align:right">{{ timestamp | format_date }}</td>
+  </tr></table>
+</div>
 </body>
 </html>
