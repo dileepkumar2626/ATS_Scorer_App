@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 try:
     from dotenv import load_dotenv
-    _ENV_PATH = Path(__file__).parent.parent / ".env"
+    _ENV_PATH = Path(__file__).parent.parent.parent / ".env"
     load_dotenv(_ENV_PATH)
 except ImportError:
     pass

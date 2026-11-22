@@ -4,7 +4,7 @@ import httpx
 import json
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
-logger=logging.getLogger("ATS_Resume_Scorer")
+logger=logging.getLogger("ats_resume_scorer")
 from backend.core.config import (
     SUPABASE_URL,
     SUPABASE_KEY,)
@@ -25,12 +25,21 @@ async def save_analysis(user_id: str, filename:str,analysis_result:Dict) -> Opti
             return o.model_dump()
         return str(o)
     serializable_result=json.loads(json.dumps(analysis_result,default=_json_default))
+    # jd_comparison nested path for keyword_match / missing_keywords
+    jd = serializable_result.get("jd_comparison") or {}
+    raw_kw = serializable_result.get("keyword_match") or jd.get("match_percentage") or 0
+    raw_missing = (
+        serializable_result.get("missing_keywords")
+        or jd.get("missing_keywords")
+        or []
+    )
+    # ensure types match the table columns (INTEGER, JSONB array of strings)
     doc={
         "user_id":user_id,
         "filename":filename,
-        "ats_score":serializable_result.get("ats_score",0),
-        "keyword_match":serializable_result.get("keyword_match",0),
-        "missing_keywords":serializable_result.get("missing_keywords",[]),
+        "ats_score": int(round(float(serializable_result.get("ats_score", 0)))),
+        "keyword_match": int(round(float(raw_kw))),
+        "missing_keywords": [str(k) for k in raw_missing],
         "analysis_result":serializable_result
     }
     url=f"{SUPABASE_URL.rstrip('/')}/rest/v1/analysis"

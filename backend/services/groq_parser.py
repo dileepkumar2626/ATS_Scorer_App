@@ -4,7 +4,7 @@ import logging
 from typing import Dict
 from groq import Groq
 logger=logging.getLogger("ats_resume_scorer")
-GROQ_MODEL="llama-3.3-70b-versatile"
+GROQ_MODEL="qwen/qwen3.8-27b"
 _client=None
 def _get_client()->Groq:
     global _client
