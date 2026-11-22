@@ -1,5 +1,6 @@
 import io
 import PyPDF2
+import zipfile
 import magic
 import pdfplumber
 from docx import Document
@@ -21,6 +22,22 @@ from backend.core.config import (
 
 class FileValidationError(Exception):
     pass
+def _detect_mime_type(file: bytes) -> str:
+    """Detect PDF / DOCX / DOC from the file's first bytes (no libmagic needed)."""
+    head = file[:8]
+    if b"%PDF-" in file[:1024]:
+        return "application/pdf"
+    if head.startswith(b"PK\x03\x04"):
+        try:
+            with zipfile.ZipFile(io.BytesIO(file)) as zf:
+                if "word/document.xml" in zf.namelist():
+                    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        except zipfile.BadZipFile:
+            pass
+        return "application/zip"
+    if head == b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1":  # old .doc format
+        return "application/msword"
+    return "application/octet-stream"
 def validate_file(file: bytes, filename: str) -> Tuple[bool, str, Optional[str]]:
     file_size = len(file)
     if file_size > MAX_FILE_SIZE_BYTES:
@@ -28,7 +45,7 @@ def validate_file(file: bytes, filename: str) -> Tuple[bool, str, Optional[str]]
     if file_size == 0:
         return False, "File is empty...please check that the file is uploaded correctly.",None
     try:
-        mime_type = magic.from_buffer(file, mime=True)
+        mime_type = _detect_mime_type(file)
     except Exception as e:
         return False, f"Error determining file type: {e}",None
     if mime_type not in SUPPORTED_FILE_TYPES:
