@@ -65,19 +65,40 @@ Important instructions:
 - Return ONLY valid JSON. No markdown code fences, no explanation.
 Resume Text:
 {raw_text}"""
+_FAST_OPTIONS_SUPPORTED = True
+
+
 def _call_groq(client:Groq,system_prompt:str,user_prompt:str)->str:
-    response=client.chat.completions.create(
+    global _FAST_OPTIONS_SUPPORTED
+    kwargs = dict(
         model=GROQ_MODEL,
         messages=[
             {"role":"system","content":system_prompt},
             {"role":"user","content":user_prompt}
         ],
         temperature=0.0,
-        max_tokens=4096
+        max_tokens=4096,
     )
+    if _FAST_OPTIONS_SUPPORTED:
+        try:
+            response = client.chat.completions.create(
+                **kwargs,
+                response_format={"type": "json_object"},
+                extra_body={"reasoning_effort": "none"},
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as exc:
+            if "400" in str(exc) or "invalid" in str(exc).lower() or "unsupported" in str(exc).lower():
+                logger.warning(f"Groq fast options rejected, using plain call: {exc}")
+                _FAST_OPTIONS_SUPPORTED = False
+            else:
+                raise
+    response=client.chat.completions.create(**kwargs)
     return response.choices[0].message.content.strip()
 def _try_parse_json(text:str) -> dict | None:
     cleaned=text.strip()
+    if "</think>" in cleaned:
+        cleaned=cleaned.split("</think>",1)[1].strip()
     if cleaned.startswith("```"):
         first_newline=cleaned.index("\n") if "\n" in cleaned else len(cleaned)
         cleaned=cleaned[first_newline+1:]

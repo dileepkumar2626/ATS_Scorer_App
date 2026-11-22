@@ -4,14 +4,18 @@ import requests
 import streamlit as st
 
 
-DEFAULT_BACKEND_URL = "atsscorerapp-production.up.railway.app"
+DEFAULT_BACKEND_URL = "https://atsscorerapp-production.up.railway.app"
 
 
 def _backend_url() -> str:
     try:
-        return st.secrets["backend"]["url"]
+        url = st.secrets["backend"]["url"]
     except (KeyError, FileNotFoundError):
-        return DEFAULT_BACKEND_URL
+        url = DEFAULT_BACKEND_URL
+    url = (url or DEFAULT_BACKEND_URL).strip().rstrip("/")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    return url
 
 
 def _auth_headers(access_token: str) -> Dict[str, str]:

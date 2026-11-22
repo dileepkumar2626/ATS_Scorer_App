@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from backend.api.auth import get_current_user
 from backend.models.schemas import AnalysisResponse, ComponentScores, JDComparison, SkillValidationDetails
 from backend.utils.file_utils import (
@@ -32,7 +33,7 @@ async def analyze_resume(
             FileValidationError,
             parse_resume
         )
-        resume_text, _metadata = parse_resume(file_bytes, filename)
+        resume_text, _metadata = await run_in_threadpool(parse_resume, file_bytes, filename)
         logger.info(f"Parsed '{filename}': {len(resume_text)} chars extracted")
     except Exception as exc:
         logger.error(f'File parsing failed: {exc}')
@@ -42,7 +43,8 @@ async def analyze_resume(
         ) 
     try:
         from backend.services.resume_analyser import analyze_full_resume
-        result = analyze_full_resume(
+        result = await run_in_threadpool(
+            analyze_full_resume,
             resume_text=resume_text,
             nlp=nlp,
             embedder=embedder,

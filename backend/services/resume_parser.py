@@ -24,11 +24,6 @@ class FileValidationError(Exception):
 
 
 def _detect_mime_type(file: bytes) -> str:
-    """Detect PDF / DOCX / DOC from the file's first bytes.
-
-    Pure-Python replacement for python-magic, which needs the libmagic
-    system library (not installed on Railway / Nixpacks).
-    """
     head = file[:8]
     if b"%PDF-" in file[:1024]:
         return "application/pdf"
@@ -40,7 +35,7 @@ def _detect_mime_type(file: bytes) -> str:
         except zipfile.BadZipFile:
             pass
         return "application/zip"
-    if head == b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1":  # legacy OLE2 (.doc)
+    if head == b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1":
         return "application/msword"
     return "application/octet-stream"
 

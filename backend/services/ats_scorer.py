@@ -86,17 +86,41 @@ def validate_skills_with_projects(skills: List[str],projects: List[Dict],experie
     validated_skills      = []
     unvalidated_skills    = []
     skill_project_mapping = {}
-    for skill in skills:
+
+    project_dicts = [p for p in projects if isinstance(p, dict)]
+    project_texts = [f"{p.get('title', '')} {p.get('description', '')}" for p in project_dicts]
+    target_texts  = project_texts + ([experience_text] if experience_text else [])
+    sim_matrix = None
+    if target_texts:
+        try:
+            skill_vecs  = np.asarray(embedder.encode(list(skills), convert_to_tensor=False, batch_size=64))
+            target_vecs = np.asarray(embedder.encode(target_texts, convert_to_tensor=False, batch_size=32))
+            skill_vecs  = skill_vecs  / np.clip(np.linalg.norm(skill_vecs,  axis=1, keepdims=True), 1e-12, None)
+            target_vecs = target_vecs / np.clip(np.linalg.norm(target_vecs, axis=1, keepdims=True), 1e-12, None)
+            sim_matrix  = np.clip(skill_vecs @ target_vecs.T, 0.0, 1.0)
+        except Exception as e:
+            log_warning(f"Batch similarity failed, falling back to per-pair: {e}", context='ats_scorer')
+
+    def _match(i: int, skill: str, j: int, text: str) -> Tuple[bool, float]:
+        if skill and text and skill.lower() in text.lower():
+            return True, 1.0
+        if sim_matrix is None:
+            return _skill_matches(skill, text, embedder, threshold)
+        if not skill or not text:
+            return False, 0.0
+        sim = float(sim_matrix[i, j])
+        return sim >= threshold, sim
+
+    for i, skill in enumerate(skills):
         matching_projects = []
         max_similarity    = 0.0
-        for project in projects:
-            project_text = f"{project.get('title', '')} {project.get('description', '')}"
-            matched, sim = _skill_matches(skill, project_text, embedder, threshold)
+        for j, project in enumerate(project_dicts):
+            matched, sim = _match(i, skill, j, project_texts[j])
             max_similarity = max(max_similarity, sim)
             if matched:
                 matching_projects.append(project.get('title', 'Untitled Project'))
         if experience_text:
-            matched, sim = _skill_matches(skill, experience_text, embedder, threshold)
+            matched, sim = _match(i, skill, len(project_texts), experience_text)
             max_similarity = max(max_similarity, sim)
             if matched and 'Experience Section' not in matching_projects:
                 matching_projects.append('Experience Section')

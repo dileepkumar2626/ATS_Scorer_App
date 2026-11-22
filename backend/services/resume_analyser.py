@@ -14,7 +14,13 @@ def analyze_full_resume(
 ) -> Dict:
     import logging
     logger = logging.getLogger('ats_resume_scorer')
-    parsed_resume = parse_resume(resume_text)
+    from concurrent.futures import ThreadPoolExecutor
+    jd_text = job_description.strip() if job_description and job_description.strip() else ''
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        resume_future = pool.submit(parse_resume, resume_text)
+        jd_future     = pool.submit(parse_job_description, jd_text) if jd_text else None
+        parsed_resume = resume_future.result()
+        parsed_jd     = jd_future.result() if jd_future else None
     logger.info(f"Groq parsed summary: {parsed_resume.get('professional_summary', '')[:100]!r}")
     logger.info(f"Groq parsed skills count: {len(parsed_resume.get('skills', []))}")
     logger.info(f"Groq parsed experience count: {len(parsed_resume.get('experience', []))}")
@@ -42,8 +48,7 @@ def analyze_full_resume(
     )
     jd_comparison_result = None
     jd_keywords = None
-    if job_description and job_description.strip():
-        parsed_jd = parse_job_description(job_description.strip())
+    if parsed_jd is not None:
         jd_keywords = list(set(
             parsed_jd.get('keywords', []) +
             parsed_jd.get('required_skills', []) +
