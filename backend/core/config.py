@@ -10,7 +10,7 @@ APP_TITLE = "ATS RESUME ANALYSER API"
 APP_VERSION="1.0.0"
 APP_DESCRIPTION="Analyse the resume again the job description with NLP and ML."
 ALLOWED_ORIGINS=[
-    'https://appapppy-ktwxupi73vqhjzweksze9d.streamlit.app',
+    'https://atsscorerapp-y4pbmmqhugizdyetxy4xuz.streamlit.app',
     'http://localhost:8501',
     'http://127.0.0.1:8501',
 ]
