@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" alt="ResumeAnalyzer AI — Intelligent resume insights" width="100%">
+<img src="assets/hero-banner.png" alt="ResumeAnalyzer AI — Intelligent resume insights" width="100%">
 
 # ResumeAnalyzer AI
 
@@ -54,7 +54,7 @@ An AI-assisted resume analysis platform that helps candidates understand resume 
 The visual below is an **illustrative dashboard concept**, not a captured screenshot of the deployed interface. Open the live app above to explore the actual product.
 
 <div align="center">
-  <img src="assets/dashboard-preview.svg" alt="Illustrative ResumeAnalyzer AI dashboard preview" width="100%">
+  <img src="assets/dashboard-preview.png" alt="Illustrative ResumeAnalyzer AI dashboard preview" width="100%">
 </div>
 
 ---
@@ -436,16 +436,6 @@ The frontend API client currently has a Railway backend URL as its fallback. The
 - NLP and embedding models load during backend startup, which can increase memory use and cold-start time.
 - Persistent history depends on a correctly configured Supabase schema and access policies.
 - The notebooks are experimentation assets; they are not automatically part of the production inference pipeline.
-
-## 🤝 Contributing
-
-Contributions, bug reports, and suggestions are welcome.
-
-1. Fork the repository.
-2. Create a branch: `git checkout -b feature/your-feature`.
-3. Make and test your changes.
-4. Commit: `git commit -m "feat: describe your change"`.
-5. Push the branch and open a pull request.
 
 ## 📜 License
 
