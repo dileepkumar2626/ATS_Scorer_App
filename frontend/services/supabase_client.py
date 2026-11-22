@@ -31,8 +31,9 @@ SUPABASE_ANON_KEY = _secret('SUPABASE_ANON_KEY')
 
 OAUTH_REDIRECT_URL = (
     os.getenv('AUTH_REDIRECT_URL')
+    or _secret('AUTH_REDIRECT_URL', 'supabase')
     or _secret('redirect_uri', 'google_oauth')
-    or 'http://localhost:8501'
+    or 'https://atsscorerapp-bn6rwhcjax6iwts4vax8ss.streamlit.app'
 )
 
 
