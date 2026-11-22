@@ -18,8 +18,6 @@ from backend.core.config import (
     MAX_FILE_SIZE_BYTES,
     SUPPORTED_FILE_TYPES,
 )
-class FileParsingError(Exception):
-    pass
 
 class FileValidationError(Exception):
     pass
