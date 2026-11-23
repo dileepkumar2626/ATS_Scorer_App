@@ -777,6 +777,7 @@ hr { border-color: var(--border) !important; opacity: 1 !important; }
 }
 
 .hero-title {
+  text-align: center;
   font-size: 2.9rem;
   font-weight: 800;
   color: var(--text-1);
@@ -794,11 +795,15 @@ hr { border-color: var(--border) !important; opacity: 1 !important; }
   background-clip: text;
 }
 
-.hero-sub {
+.hero-sub,
+.hero-section p.hero-sub {
   font-size: 16px;
   color: var(--text-3);
-  max-width: 520px;
-  margin: 0 auto 32px;
+  max-width: 560px;
+  /* !important: Streamlit's own "p { margin: 0 0 1rem }" rule is more specific
+     and was cancelling the auto margins, pushing the paragraph to the left. */
+  margin: 0 auto 32px !important;
+  text-align: center;
   line-height: 1.65;
   position: relative;
   z-index: 1;
@@ -954,4 +959,13 @@ hr { border-color: var(--border) !important; opacity: 1 !important; }
   font-size: 11.5px;
   color: var(--text-3);
   font-weight: 400;
+}
+
+/* Invisible helper iframe that saves the sign-in cookie: take it out of the layout */
+[data-testid="stElementContainer"][height="0px"]:has(> iframe),
+.element-container:has(> iframe[height="0"]) {
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }

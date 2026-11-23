@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict
 import streamlit as st
-from supabase import Client, create_client
+from supabase import Client, ClientOptions, create_client
 
 logger = logging.getLogger('ats_resume_scorer')
 
@@ -43,12 +43,22 @@ def _missing_config() -> str | None:
     return None
 
 
-@st.cache_resource
 def get_client() -> Client | None:
-    """Cached singleton — preserves PKCE state across Streamlit reruns."""
+    """A fresh, per-call client.
+
+    The client is deliberately NOT shared (no @st.cache_resource). A shared client
+    stores whichever user signed in last and silently refreshes *their* tokens in a
+    background timer. That rotates the refresh token kept in the user's browser
+    cookie and logs them out on the next reload, and a shared sign_out() could
+    sign out a different user. Each call gets its own client with auto-refresh off.
+    """
     if _missing_config():
         return None
-    return create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+    return create_client(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+        options=ClientOptions(auto_refresh_token=False, persist_session=False, flow_type='pkce'),
+    )
 
 
 def _session_dict(session, user) -> Dict[str, Any]:
@@ -96,12 +106,11 @@ def google_oauth_url() -> Dict[str, Any]:
     err = _missing_config()
     if err:
         return {'error': err}
-    # Cache URL + verifier in session_state.
-    # The sidebar calls this function on EVERY Streamlit rerun. Without caching,
-    # each call to sign_in_with_oauth generates a NEW code_verifier and overwrites
-    # the previous one in memory — so the verifier no longer matches the URL the
-    # user clicked, causing "both auth code and code verifier should be non-empty".
-    if '_google_oauth_cache' in st.session_state:
+    # The sidebar calls this on every rerun, so cache the URL + PKCE verifier in
+    # session_state; a new verifier on each rerun would no longer match the URL.
+    # The verifier is also written to a browser cookie by streamlit_app.py, because
+    # the Google button opens a new tab (a new Streamlit session) for the callback.
+    if '_google_oauth_cache' in st.session_state and st.session_state.get('_google_code_verifier'):
         return {'url': st.session_state['_google_oauth_cache']}
     try:
         client = get_client()
@@ -109,49 +118,65 @@ def google_oauth_url() -> Dict[str, Any]:
             'provider': 'google',
             'options': {'redirect_to': OAUTH_REDIRECT_URL},
         })
-        # Immediately capture code_verifier from client storage before any
-        # subsequent call can overwrite it, and persist it in session_state.
         try:
             storage_key = f'{client.auth._storage_key}-code-verifier'
-            cv = client.auth._storage.get_item(storage_key) or ''
+            cv = (client.auth._storage.get_item(storage_key) or '').partition('/')[0]
         except Exception:
             cv = ''
         st.session_state['_google_oauth_cache'] = resp.url
-        if cv:
-            st.session_state['_google_code_verifier'] = cv
+        st.session_state['_google_code_verifier'] = cv
         return {'url': resp.url}
     except Exception as exc:
         logger.warning(f'oauth url generation failed: {exc}')
         return {'error': _humanize(exc)}
 
 
-def exchange_code_for_session(auth_code: str) -> Dict[str, Any]:
-    """Called once after the OAuth provider redirects back with `?code=...`."""
+def exchange_code_for_session(auth_code: str, code_verifier: str = '') -> Dict[str, Any]:
+    """Called once after the OAuth provider redirects back with `?code=...`.
+
+    `code_verifier` comes from the browser cookie set when the Google button was
+    shown; session_state is the fallback when the callback lands in the same tab.
+    """
     err = _missing_config()
     if err:
         return {'error': err}
-    client = get_client()
+    code_verifier = code_verifier or st.session_state.get('_google_code_verifier', '')
+    if not code_verifier:
+        return {'error': 'Sign-in link expired. Please click "Continue with Google" again.'}
     try:
-        # Prefer the verifier we saved to session_state; fall back to storage.
-        code_verifier = st.session_state.pop('_google_code_verifier', '') or ''
-        if not code_verifier:
-            try:
-                storage_key = f'{client.auth._storage_key}-code-verifier'
-                code_verifier = client.auth._storage.get_item(storage_key) or ''
-            except Exception:
-                code_verifier = ''
-        resp = client.auth.exchange_code_for_session({
-            'auth_code':    auth_code,
+        resp = get_client().auth.exchange_code_for_session({
+            'auth_code':     auth_code,
             'code_verifier': code_verifier,
-            'redirect_to':  OAUTH_REDIRECT_URL,
+            'redirect_to':   OAUTH_REDIRECT_URL,
         })
         if not resp.session or not resp.user:
             return {'error': 'OAuth exchange returned no session'}
-        # Clear cached URL so next sign-in attempt generates a fresh PKCE pair
+        # Clear cached URL so the next sign-in attempt generates a fresh PKCE pair
         st.session_state.pop('_google_oauth_cache', None)
+        st.session_state.pop('_google_code_verifier', None)
         return _session_dict(resp.session, resp.user)
     except Exception as exc:
         logger.warning(f'exchange_code_for_session failed: {exc}')
+        return {'error': _humanize(exc)}
+
+
+def restore_session(refresh_token: str) -> Dict[str, Any]:
+    """Turn the refresh token saved in the browser cookie into a fresh session.
+
+    Supabase rotates refresh tokens, so the caller must save the new one.
+    """
+    err = _missing_config()
+    if err:
+        return {'error': err}
+    if not refresh_token:
+        return {'error': 'No saved session'}
+    try:
+        resp = get_client().auth.refresh_session(refresh_token)
+        if not resp.session or not resp.user:
+            return {'error': 'Saved session is no longer valid'}
+        return _session_dict(resp.session, resp.user)
+    except Exception as exc:
+        logger.info(f'restore_session failed: {exc}')
         return {'error': _humanize(exc)}
 
 
@@ -170,11 +195,12 @@ def reset_password_for_email(email: str) -> Dict[str, Any]:
         return {'error': _humanize(exc)}
 
 
-def sign_out() -> None:
-    if _missing_config():
+def sign_out(access_token: str | None = None) -> None:
+    """Revoke this browser's session only (scope='local'), using the user's own token."""
+    if _missing_config() or not access_token:
         return
     try:
-        get_client().auth.sign_out()
+        get_client().auth.admin.sign_out(access_token, 'local')
     except Exception as exc:
         logger.warning(f'sign_out failed: {exc}')
 

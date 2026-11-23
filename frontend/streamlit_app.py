@@ -26,19 +26,41 @@ for key, default in [
     if key not in st.session_state:
         st.session_state[key] = default
 
-# ── OAuth callback ──────────────────────────────────────────
+# ── Restore sign-in (OAuth callback, or saved cookie after a reload) ─────
+from frontend.services import auth_cookies
+
+
+def _set_user(result: dict) -> None:
+    st.session_state.access_token  = result["access_token"]
+    st.session_state.refresh_token = result["refresh_token"]
+    st.session_state.user_id       = result["user_id"]
+    st.session_state.user_email    = result["email"]
+
+
 if not st.session_state.access_token and "code" in st.query_params:
     from frontend.services import supabase_client
-    result = supabase_client.exchange_code_for_session(st.query_params["code"])
+    st.session_state._restore_attempted = True
+    result = supabase_client.exchange_code_for_session(
+        st.query_params["code"],
+        auth_cookies.get(auth_cookies.VERIFIER_COOKIE),
+    )
     st.query_params.clear()
     if "error" in result:
         st.session_state.auth_error = f"Google sign-in failed: {result['error']}"
     else:
-        st.session_state.access_token  = result["access_token"]
-        st.session_state.refresh_token = result["refresh_token"]
-        st.session_state.user_id       = result["user_id"]
-        st.session_state.user_email    = result["email"]
+        _set_user(result)
         st.rerun()
+
+# Cookies are only read once per browser session; after "Sign out" the stale
+# cookie value must not sign the user straight back in.
+if not st.session_state.get("_restore_attempted"):
+    st.session_state._restore_attempted = True
+    saved_token = auth_cookies.get(auth_cookies.REFRESH_COOKIE)
+    if saved_token and not st.session_state.access_token:
+        from frontend.services import supabase_client
+        result = supabase_client.restore_session(saved_token)
+        if "error" not in result:
+            _set_user(result)
 
 
 # ── Load CSS ────────────────────────────────────────────────
@@ -105,7 +127,7 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
         if st.button("Sign out", use_container_width=True):
-            supabase_client.sign_out()
+            supabase_client.sign_out(st.session_state.access_token)
             for k in ("access_token", "refresh_token", "user_id", "user_email"):
                 st.session_state[k] = None
             st.rerun()
@@ -156,10 +178,7 @@ with st.sidebar:
                     if "error" in result:
                         st.session_state.auth_error = result["error"]
                     else:
-                        st.session_state.access_token  = result["access_token"]
-                        st.session_state.refresh_token = result["refresh_token"]
-                        st.session_state.user_id       = result["user_id"]
-                        st.session_state.user_email    = result["email"]
+                        _set_user(result)
                     st.rerun()
 
                 if st.button("Forgot password?", key="forgot_pw_btn"):
@@ -182,10 +201,7 @@ with st.sidebar:
                         f"Check your inbox — confirmation email sent to {result['email']}."
                     )
                 else:
-                    st.session_state.access_token  = result["access_token"]
-                    st.session_state.refresh_token = result["refresh_token"]
-                    st.session_state.user_id       = result["user_id"]
-                    st.session_state.user_email    = result["email"]
+                    _set_user(result)
                 st.rerun()
 
         # Google OAuth — branded button
@@ -238,6 +254,13 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     st.button("Upgrade →", key="upgrade_btn", use_container_width=True, type="primary")
+
+    # Save / clear the browser cookies that keep the user signed in on reload.
+    auth_cookies.sync({
+        auth_cookies.REFRESH_COOKIE:  st.session_state.refresh_token,
+        auth_cookies.VERIFIER_COOKIE: None if st.session_state.access_token
+                                      else st.session_state.get("_google_code_verifier"),
+    })
 
 
 # ── View routing ────────────────────────────────────────────
