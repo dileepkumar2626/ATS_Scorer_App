@@ -26,8 +26,8 @@ for key, default in [
     if key not in st.session_state:
         st.session_state[key] = default
 
-# ── Restore sign-in (OAuth callback, or saved cookie after a reload) ─────
-from frontend.services import auth_cookies
+# ── Restore sign-in (OAuth callback, or saved login after a reload) ─────
+from frontend.services import auth_storage
 
 
 def _set_user(result: dict) -> None:
@@ -37,30 +37,33 @@ def _set_user(result: dict) -> None:
     st.session_state.user_email    = result["email"]
 
 
-if not st.session_state.access_token and "code" in st.query_params:
+# The browser reports its saved values one rerun after the page loads (None
+# until then). Handle them once per session: after "Sign out", the old value
+# must not sign the user straight back in.
+_saved = auth_storage.stored()
+if _saved is not None and not st.session_state.get("_restore_attempted"):
+    st.session_state._restore_attempted = True
     from frontend.services import supabase_client
-    st.session_state._restore_attempted = True
-    result = supabase_client.exchange_code_for_session(
-        st.query_params["code"],
-        auth_cookies.get(auth_cookies.VERIFIER_COOKIE),
-    )
-    st.query_params.clear()
-    if "error" in result:
-        st.session_state.auth_error = f"Google sign-in failed: {result['error']}"
-    else:
-        _set_user(result)
-        st.rerun()
 
-# Cookies are only read once per browser session; after "Sign out" the stale
-# cookie value must not sign the user straight back in.
-if not st.session_state.get("_restore_attempted"):
-    st.session_state._restore_attempted = True
-    saved_token = auth_cookies.get(auth_cookies.REFRESH_COOKIE)
-    if saved_token and not st.session_state.access_token:
-        from frontend.services import supabase_client
-        result = supabase_client.restore_session(saved_token)
+    if not st.session_state.access_token and "code" in st.query_params:
+        # Back from Google (in a new tab): finish sign-in with the PKCE verifier
+        # that the original tab saved in this browser.
+        result = supabase_client.exchange_code_for_session(
+            st.query_params["code"],
+            _saved.get(auth_storage.VERIFIER_KEY, ""),
+        )
+        st.query_params.clear()
+        if "error" in result:
+            st.session_state.auth_error = f"Google sign-in failed: {result['error']}"
+        else:
+            _set_user(result)
+            st.rerun()
+
+    elif not st.session_state.access_token and _saved.get(auth_storage.REFRESH_KEY):
+        result = supabase_client.restore_session(_saved[auth_storage.REFRESH_KEY])
         if "error" not in result:
             _set_user(result)
+            st.rerun()  # so the rotated refresh token is saved straight away
 
 
 # ── Load CSS ────────────────────────────────────────────────
@@ -255,12 +258,18 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     st.button("Upgrade →", key="upgrade_btn", use_container_width=True, type="primary")
 
-    # Save / clear the browser cookies that keep the user signed in on reload.
-    auth_cookies.sync({
-        auth_cookies.REFRESH_COOKIE:  st.session_state.refresh_token,
-        auth_cookies.VERIFIER_COOKIE: None if st.session_state.access_token
-                                      else st.session_state.get("_google_code_verifier"),
-    })
+    # Save / clear what keeps the user signed in on reload (invisible component).
+    # Nothing is written until the browser's saved values have been read once.
+    auth_storage.sync(
+        {
+            auth_storage.REFRESH_KEY:  st.session_state.refresh_token,
+            auth_storage.VERIFIER_KEY: None if st.session_state.access_token
+                                       else st.session_state.get("_google_code_verifier"),
+        }
+        if st.session_state.get("_restore_attempted") else None
+    )
+    if _saved is None and "code" in st.query_params and not st.session_state.access_token:
+        st.info("Signing you in with Google…")
 
 
 # ── View routing ────────────────────────────────────────────

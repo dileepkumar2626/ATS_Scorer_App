@@ -49,7 +49,7 @@ def get_client() -> Client | None:
     The client is deliberately NOT shared (no @st.cache_resource). A shared client
     stores whichever user signed in last and silently refreshes *their* tokens in a
     background timer. That rotates the refresh token kept in the user's browser
-    cookie and logs them out on the next reload, and a shared sign_out() could
+    browser and logs them out on the next reload, and a shared sign_out() could
     sign out a different user. Each call gets its own client with auto-refresh off.
     """
     if _missing_config():
@@ -108,7 +108,7 @@ def google_oauth_url() -> Dict[str, Any]:
         return {'error': err}
     # The sidebar calls this on every rerun, so cache the URL + PKCE verifier in
     # session_state; a new verifier on each rerun would no longer match the URL.
-    # The verifier is also written to a browser cookie by streamlit_app.py, because
+    # The verifier is also saved in the browser (localStorage) by streamlit_app.py, because
     # the Google button opens a new tab (a new Streamlit session) for the callback.
     if '_google_oauth_cache' in st.session_state and st.session_state.get('_google_code_verifier'):
         return {'url': st.session_state['_google_oauth_cache']}
@@ -134,7 +134,7 @@ def google_oauth_url() -> Dict[str, Any]:
 def exchange_code_for_session(auth_code: str, code_verifier: str = '') -> Dict[str, Any]:
     """Called once after the OAuth provider redirects back with `?code=...`.
 
-    `code_verifier` comes from the browser cookie set when the Google button was
+    `code_verifier` comes from the browser's localStorage, saved when the Google button was
     shown; session_state is the fallback when the callback lands in the same tab.
     """
     err = _missing_config()
@@ -161,7 +161,7 @@ def exchange_code_for_session(auth_code: str, code_verifier: str = '') -> Dict[s
 
 
 def restore_session(refresh_token: str) -> Dict[str, Any]:
-    """Turn the refresh token saved in the browser cookie into a fresh session.
+    """Turn the refresh token saved in the browser (localStorage) into a fresh session.
 
     Supabase rotates refresh tokens, so the caller must save the new one.
     """

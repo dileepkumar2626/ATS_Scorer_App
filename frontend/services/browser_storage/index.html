@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0">
+<script>
+// Minimal Streamlit component (no build step): saves values to this browser's
+// localStorage and reports them back to Python. Used to keep users signed in
+// across page reloads. Cookies can't be used for this on Streamlit Community
+// Cloud, because its proxy strips them before they reach the app.
+(function () {
+  let lastSent = null;
+  function send(type, data) {
+    window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data || {}), "*");
+  }
+  window.addEventListener("message", function (event) {
+    const msg = event.data || {};
+    if (msg.type !== "streamlit:render") return;
+    const args = msg.args || {};
+    const writes = args.writes || null;   // {key: value | null}; null value deletes
+    const keys = args.keys || [];
+    if (writes) {
+      for (const k of Object.keys(writes)) {
+        try {
+          if (writes[k]) localStorage.setItem(k, writes[k]);
+          else localStorage.removeItem(k);
+        } catch (e) {}
+      }
+    }
+    const out = {};
+    for (const k of keys) {
+      try { out[k] = localStorage.getItem(k) || ""; } catch (e) { out[k] = ""; }
+    }
+    const json = JSON.stringify(out);
+    if (json !== lastSent) {           // only report changes, avoids rerun loops
+      lastSent = json;
+      send("streamlit:setComponentValue", { value: out, dataType: "json" });
+    }
+  });
+  send("streamlit:componentReady", { apiVersion: 1 });
+  send("streamlit:setFrameHeight", { height: 0 });
+})();
+</script>
+</body>
+</html>

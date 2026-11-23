@@ -961,7 +961,8 @@ hr { border-color: var(--border) !important; opacity: 1 !important; }
   font-weight: 400;
 }
 
-/* Invisible helper iframe that saves the sign-in cookie: take it out of the layout */
+/* Invisible helper iframe that keeps users signed in: take it out of the layout */
+[data-testid="stElementContainer"]:has(iframe[title*="ra_browser_storage"]),
 [data-testid="stElementContainer"][height="0px"]:has(> iframe),
 .element-container:has(> iframe[height="0"]) {
   position: absolute !important;
