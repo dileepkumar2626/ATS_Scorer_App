@@ -11,7 +11,9 @@ def analyze_full_resume(
     nlp: spacy.Language,
     embedder: SentenceTransformer,
     job_description: Optional[str] = None,
+    jd_embedder: Optional[SentenceTransformer] = None,
 ) -> Dict:
+    """`jd_embedder` (the fine-tuned model) scores resume vs JD; `embedder` does skill checks."""
     import logging
     logger = logging.getLogger('ats_resume_scorer')
     from concurrent.futures import ThreadPoolExecutor
@@ -60,7 +62,7 @@ def analyze_full_resume(
             resume_skills=skills,
             jd_text=job_description.strip(),
             jd_keywords=jd_keywords,
-            embedder=embedder,
+            embedder=jd_embedder or embedder,
             nlp=nlp,
         )
 

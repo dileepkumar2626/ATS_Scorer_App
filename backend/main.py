@@ -9,7 +9,8 @@ from backend.core.config import (
     APP_DESCRIPTION,
     SPACY_MODEL_PRIMARY,
     SPACY_MODEL_SECONDARY,
-    SENTENCE_TRANSFORMER_MODEL,)
+    SENTENCE_TRANSFORMER_MODEL,
+    JD_MATCH_MODEL,)
 from backend.api.routes import router
 logger = logging.getLogger("ATS_Resume_Scorer")
 @asynccontextmanager
@@ -32,6 +33,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error loading Sentence Transformer Model:{SENTENCE_TRANSFORMER_MODEL}: {e}")
         raise e
+    # Fine-tuned model for the resume <-> JD score. Optional: if it can't be loaded,
+    # log it and fall back to the general embedder instead of failing startup.
+    app.state.jd_embedder = None
+    app.state.jd_model_name = SENTENCE_TRANSFORMER_MODEL
+    if JD_MATCH_MODEL:
+        logger.info(f"Loading fine-tuned JD match model:{JD_MATCH_MODEL}")
+        try:
+            app.state.jd_embedder = SentenceTransformer(JD_MATCH_MODEL)
+            app.state.jd_model_name = JD_MATCH_MODEL
+            logger.info(f"Fine-tuned JD match model:{JD_MATCH_MODEL} loaded successfully")
+        except Exception as e:
+            logger.error(f"Could not load JD match model {JD_MATCH_MODEL}, using {SENTENCE_TRANSFORMER_MODEL} instead: {e}")
     logger.info("All models loaded successfully, ATS Resume Analyser is ready to serve requests.")
     yield
     logger.info("Shutting down the api ...")

@@ -22,6 +22,11 @@ SUPPORTED_FILE_TYPES = {
 SPACY_MODEL_PRIMARY="en_core_web_md"
 SPACY_MODEL_SECONDARY="en_core_web_sm"
 SENTENCE_TRANSFORMER_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+# Fine-tuned resume <-> job description model (jupyter_notebooks/03_BERT_FINE_TUNING.ipynb),
+# hosted on the Hugging Face Hub. Used only for the resume vs JD similarity score, the task
+# it was trained on. Leave empty to use SENTENCE_TRANSFORMER_MODEL for that score too.
+# If the Hub repo is private, also set HF_TOKEN (read access) in the environment.
+JD_MATCH_MODEL = os.getenv("JD_MATCH_MODEL", "").strip()
 SCORE_WEIGHTS = {
     "formatting": 20,
     "content": 25,

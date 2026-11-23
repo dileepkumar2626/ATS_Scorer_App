@@ -25,6 +25,7 @@ async def analyze_resume(
     warnings: List[str] = []
     nlp      = request.app.state.nlp
     embedder = request.app.state.embedder
+    jd_embedder = getattr(request.app.state, 'jd_embedder', None) or embedder
     try:
         file_bytes = await resume.read()
         filename   = resume.filename or 'resume'
@@ -48,6 +49,7 @@ async def analyze_resume(
             resume_text=resume_text,
             nlp=nlp,
             embedder=embedder,
+            jd_embedder=jd_embedder,
             job_description=job_description
         )
     except Exception as exc:
@@ -100,6 +102,7 @@ async def health_check(request: Request):
         'status':          'healthy',
         'nlp_loaded':      request.app.state.nlp is not None,
         'embedder_loaded': request.app.state.embedder is not None,
+        'jd_match_model':  getattr(request.app.state, 'jd_model_name', None),
     }
 @router.get('/history')
 async def get_history(user_id: str = Depends(get_current_user)):
