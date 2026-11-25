@@ -25,6 +25,7 @@ An AI-assisted resume analysis platform that helps candidates understand resume 
   <img src="https://img.shields.io/badge/Auth-Supabase-3FCF8E?style=flat-square&logo=supabase&logoColor=white">
   <img src="https://img.shields.io/badge/NLP-spaCy-09A3D5?style=flat-square">
   <img src="https://img.shields.io/badge/Embeddings-Sentence_Transformers-7C3AED?style=flat-square">
+  <img src="https://img.shields.io/badge/Model-Fine--tuned_BERT-FFD21E?style=flat-square&logo=huggingface&logoColor=black">
 </p>
 
 <p><b>Built by <a href="https://github.com/dileepkumar2626">Dileep Kumar</a></b></p>
@@ -78,7 +79,7 @@ The visual below is an **illustrative dashboard concept**, not a captured screen
 ### 🎯 Job description matching
 - Add a target job description.
 - Compare resume keywords with job requirements.
-- Measure semantic similarity.
+- Measure semantic similarity with a BERT model fine-tuned on resume–job description pairs (optional, with a general-purpose fallback).
 - Find matched and missing keywords.
 - Identify potential skill gaps.
 
@@ -100,6 +101,7 @@ The visual below is an **illustrative dashboard concept**, not a captured screen
 - Supabase email/password authentication.
 - Google OAuth sign-in (when configured).
 - Password-reset flow.
+- Stays signed in across page reloads.
 - User-specific analysis history.
 - Delete saved analyses.
 - Generate downloadable PDF reports.
@@ -143,8 +145,10 @@ flowchart TD
     F --> G["🧠 Structured Resume Data"]
     G --> H["spaCy NLP"]
     G --> I["Sentence Transformer Embeddings"]
+    G --> P["🧪 Fine-tuned BERT JD Model (optional)"]
     H --> J["📊 ATS Scoring Engine"]
     I --> K["🎯 Skill Validation & Job Matching"]
+    P --> K
     G --> L["💡 Feedback & Recommendations"]
     J --> M["📈 Analysis Results"]
     K --> M
@@ -163,7 +167,7 @@ flowchart TD
 5. **Process** — spaCy and Sentence Transformers support NLP and semantic analysis.
 6. **Validate** — the pipeline checks whether listed skills have evidence in projects or experience.
 7. **Score** — the scoring engine calculates the component scores and overall result.
-8. **Compare** — when a job description is supplied, keyword matching and semantic similarity identify overlaps and gaps.
+8. **Compare** — when a job description is supplied, keyword matching and semantic similarity identify overlaps and gaps. The resume-vs-JD similarity uses the fine-tuned BERT model when `JD_MATCH_MODEL` is set, and the general `all-MiniLM-L6-v2` model otherwise.
 9. **Recommend** — feedback services produce strengths, issues, and practical suggestions.
 10. **Save and export** — the backend attempts to save analysis history in Supabase, and the frontend can generate a PDF report.
 
@@ -187,6 +191,16 @@ Job-description matching combines:
 | 🔎 Keyword matching | 60% |
 | 🧠 Semantic similarity | 40% |
 
+### 🧪 Fine-tuned JD matching model
+
+The semantic-similarity part of job matching can use a BERT model fine-tuned on resume–job description pairs in `jupyter_notebooks/03_BERT_FINE_TUNING.ipynb`. The model is hosted on the Hugging Face Hub and loaded at backend startup:
+
+- Set `JD_MATCH_MODEL` to the model's Hub ID (for example `your-username/your-model-name`) to enable it.
+- If the Hub repository is private, also set `HF_TOKEN` with read access.
+- If `JD_MATCH_MODEL` is empty or the model fails to load, the backend logs the problem and falls back to `sentence-transformers/all-MiniLM-L6-v2`, so startup never fails because of it.
+- The fine-tuned model is used only for the resume-vs-JD similarity score (the task it was trained on). Skill validation still uses the general embedder.
+- `GET /api/v1/health` reports which model is active in the `jd_match_model` field.
+
 > **A note on scores:** These are the application's own configured heuristics, not an official score from an employer's ATS. Results are estimates intended to guide improvements; they cannot guarantee that a resume will pass an employer's screening process or lead to an interview.
 
 ## 🛠️ Technology stack
@@ -200,19 +214,21 @@ Job-description matching combines:
 | 🖥️ Frontend | Python, Streamlit, custom CSS |
 | ⚡ Backend | FastAPI, Uvicorn, Pydantic |
 | 🧠 NLP | spaCy |
-| 🔎 Semantic embeddings | Sentence Transformers, `all-MiniLM-L6-v2` |
+| 🔎 Semantic embeddings | Sentence Transformers, `all-MiniLM-L6-v2`, fine-tuned BERT JD model (Hugging Face Hub) |
+| 🔤 Fuzzy matching | RapidFuzz |
 | ✨ LLM-assisted parsing | Groq API |
 | 📑 Document parsing | pdfplumber, PyPDF2, python-docx |
 | 🔐 Authentication | Supabase Auth, Google OAuth, JWT verification |
 | 🗄️ Persistence | Supabase REST API |
 | 📄 PDF reports | Jinja2, xhtml2pdf |
-| 🔬 Experiments | Jupyter Notebook, pandas, NumPy, BERT embeddings |
+| 🔬 Experiments | Jupyter Notebook, pandas, NumPy, BERT embeddings and fine-tuning |
 
 ## 🏗️ Project structure
 
 ```text
 ATS_Scorer_App/
 │
+├── .devcontainer/                  # Dev container / GitHub Codespaces setup
 ├── assets/                         # README banner and visual previews
 │
 ├── backend/
@@ -236,18 +252,28 @@ ATS_Scorer_App/
 │   │   ├── resume_analyser.py      # Analysis orchestration
 │   │   └── resume_parser.py        # File validation and text extraction
 │   ├── templates/                  # HTML report templates
-│   └── main.py                     # FastAPI application
+│   ├── utils/
+│   │   ├── file_utils.py           # File helpers
+│   │   └── matching.py             # Fuzzy keyword and skill matching
+│   └── main.py                     # FastAPI app; loads spaCy and embedding models
 │
 ├── frontend/
 │   ├── assets/                     # Frontend styles
 │   ├── components/                 # Reusable UI components
 │   ├── services/
 │   │   ├── api_client.py           # Calls the FastAPI backend
+│   │   ├── auth_storage.py         # Keeps users signed in across reloads
+│   │   ├── browser_storage/        # Small component for browser localStorage
 │   │   └── supabase_client.py      # Supabase authentication
 │   ├── views/                      # Streamlit pages and views
+│   ├── requirements.txt            # Frontend-only dependencies
 │   └── streamlit_app.py            # Streamlit entry point
 │
-├── jupyter_notebooks/              # EDA and embedding experiments
+├── jupyter_notebooks/
+│   ├── 01_EDA_and_DATA_prep.ipynb  # Data exploration and cleaning
+│   ├── 02_BERT_Embeddings..ipynb   # Baseline BERT embeddings
+│   ├── 03_BERT_FINE_TUNING.ipynb   # Fine-tuning the JD matching model
+│   └── data/                       # Resume–JD datasets
 ├── .streamlit/
 │   ├── config.toml
 │   └── secrets.toml.example
@@ -308,7 +334,13 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_server_side_supabase_key
 SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_JWT_SECRET=your_jwt_secret
+
+# Optional: fine-tuned JD matching model on the Hugging Face Hub
+JD_MATCH_MODEL=your-username/your-model-name
+HF_TOKEN=your_hf_read_token        # only needed if the model repo is private
 ```
+
+If you leave `JD_MATCH_MODEL` out, the backend uses `all-MiniLM-L6-v2` for job matching.
 
 Create `.streamlit/secrets.toml` for the frontend:
 
@@ -325,6 +357,8 @@ redirect_uri = "http://localhost:8501"
 ```
 
 Use `.streamlit/secrets.toml.example` as the template. Never commit real credentials.
+
+The frontend reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the root `.env` first and falls back to `.streamlit/secrets.toml`. The Google OAuth redirect URL can also be set with an `AUTH_REDIRECT_URL` environment variable.
 
 ### 5. Start the FastAPI backend
 
@@ -351,6 +385,10 @@ streamlit run frontend/streamlit_app.py
 
 Open `http://localhost:8501` in your browser. Ensure `[backend].url` in Streamlit secrets points to the FastAPI backend.
 
+### Alternative: GitHub Codespaces / Dev Container
+
+The repository includes a `.devcontainer/` configuration (Python 3.11). Opening it in GitHub Codespaces or VS Code Dev Containers installs `requirements.txt` and starts the Streamlit frontend on port 8501 automatically. You still need to add your secrets and run the backend.
+
 ## 🔌 API reference
 
 The API router is mounted under `/api/v1`.
@@ -358,7 +396,7 @@ The API router is mounted under `/api/v1`.
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `POST` | `/api/v1/analyze-resume` | Analyze a PDF, DOC, or DOCX resume; optional job description |
-| `GET` | `/api/v1/health` | Check API and model readiness |
+| `GET` | `/api/v1/health` | Check API and model readiness, including the active JD matching model |
 | `GET` | `/api/v1/history` | Retrieve the authenticated user's analysis history |
 | `DELETE` | `/api/v1/history/{analysis_id}` | Delete a history entry |
 | `POST` | `/api/v1/generate-pdf` | Generate a PDF from analysis data |
@@ -395,7 +433,7 @@ The project uses two separately deployed services:
 
 1. Create a Railway project and deploy the GitHub repository.
 2. Keep the service root at the repository root.
-3. Add backend environment variables in Railway's Variables panel.
+3. Add backend environment variables in Railway's Variables panel, including `JD_MATCH_MODEL` (and `HF_TOKEN` if the model is private) to use the fine-tuned matching model.
 4. The repository's `railway.toml` starts the FastAPI service using the Railway-provided `$PORT`.
 5. Generate a public Railway domain.
 6. Test `/health` and `/api/v1/health` on the deployed backend URL.
@@ -435,7 +473,8 @@ The frontend API client currently has a Railway backend URL as its fallback. The
 - Results depend on document extraction quality and the completeness of the supplied job description.
 - NLP and embedding models load during backend startup, which can increase memory use and cold-start time.
 - Persistent history depends on a correctly configured Supabase schema and access policies.
-- The notebooks are experimentation assets; they are not automatically part of the production inference pipeline.
+- The notebooks are experimentation assets and are not run in production. The fine-tuned model they produce is used only if it is published to the Hugging Face Hub and `JD_MATCH_MODEL` is set.
+- Loading the fine-tuned model adds memory use and startup time on the backend.
 
 ## 📜 License
 
